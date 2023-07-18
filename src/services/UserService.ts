@@ -1,41 +1,53 @@
-import { User } from "../interfaces/User";
+import { sign } from "jsonwebtoken";
+import { AppDataSource } from "../database";
+import { User } from "../entities/User";
+import { IUser } from "../interfaces/IUser";
+import { UserRepository } from "../repositories/UserRepository";
 
-
-const db = [
-    {
-        name: "Mateus",
-        email: "mateus@gmail.com"
-    }
-]
 export class UserService {
-    db: User[];
-
-    constructor(database = db) {
-        this.db = database;
-    }
+    private userRepository: UserRepository;
     
-
-    createUser = (name: string, email: string) => {
-        const user = {
-            name,
-            email
-        }
-        this.db.push(user);
-        console.log('DB updated', this.db);
+    constructor(
+        userRepository = new UserRepository(AppDataSource.manager)
+    ) {
+        this.userRepository = userRepository;
     }
 
-    getAllUsers = () => {
-        return this.db;
+    createUser = (name: string, email: string, password: string) => {
+        const user = new User(name, email, password);
+        return this.userRepository.createUser(user);
+    }
+
+    getUser = async (userId: string): Promise<User | null> => {
+        return this.userRepository.getUser(userId);
+    }
+
+    getAuthenticatedUser = async (email: string, password: string): Promise<User | null> => {
+        return this.userRepository.getUserByCredentials(email, password)
+    }
+
+    getToken = async (email: string, password: string) => {
+        const user = await this.getAuthenticatedUser(email, password)
+
+        if (!user) {
+            throw new Error('Email or password invalid');
+        }
+        
+        const tokenData = {
+            name: user?.name,
+            email: user?.email
+        }
+
+        const tokenKey = '123456789';
+
+        const tokenOptions = {
+            subject: user?.user_id
+        }
+        const token = sign(tokenData, tokenKey, tokenOptions);
+        return token;
     }
     
     deleteUser = (name: string) => {
-        for (let i = 0; i < this.db.length; i++) {
-            if (this.db[i].name === name) {
-                this.db.splice(i, 1);
-                console.log('Usuário excluído com sucesso')
-                return true;
-            }
-        }
-        return false;
+        
     }
 }

@@ -2,20 +2,35 @@ import { UserService } from "../services/UserService"
 import { UserController } from "./UserController";
 import { makeMockResponse } from "../__mocks__/mockResponse.mock";
 import { Request } from "express";
+import { makeMockRequest } from "../__mocks__/mockRequest.mock";
 
+
+const mockUserService = {
+    getUser: jest.fn(),
+    createUser: jest.fn()
+}
+jest.mock('../services/UserService', () => {
+    return {
+        UserService: jest.fn().mockImplementation(() => {
+            return mockUserService;
+        })
+    }
+})
 
 describe('UserController', () => {
-    const mockUserService: Partial<UserService> = {
-        createUser: jest.fn(),
-        getAllUsers: jest.fn(),
-        deleteUser: jest.fn()
-    };
 
-    const userController = new UserController(mockUserService as UserService); 
+    const userController = new UserController();
+    const mockResponse = makeMockResponse(); 
 
-    it('Should show all users', () => {
-        const mockResponse = makeMockResponse();
-        userController.getAllUsers(mockResponse);
+    it('Should show user by id', () => {
+        const mockRequest = makeMockRequest({
+            params: {
+                userId: '123456'
+            }
+        });
+
+        userController.getUser(mockRequest, mockResponse);
+        expect(mockUserService.getUser).toHaveBeenCalledWith('123456');
         expect(mockResponse.state.status).toBe(200);
     })
 
@@ -23,10 +38,11 @@ describe('UserController', () => {
         const mockRequest = {
             body: {
                 name: 'Luis',
-                email: 'luis@gmail.com'
+                email: 'luis@gmail.com',
+                password: '123123'
             } 
         } as Request;
-        const mockResponse = makeMockResponse();
+        
         userController.createUser(mockRequest, mockResponse);
         expect(mockResponse.state.status).toBe(201);
         expect(mockResponse.state.json).toMatchObject({message: 'User created'})
@@ -35,10 +51,11 @@ describe('UserController', () => {
         const mockRequest = {
             body: {
                 name: '',
-                email: 'mat@gmail.com'
+                email: 'mat@gmail.com',
+                password: '123123'
             } 
         } as Request;
-        const mockResponse = makeMockResponse();
+        
         userController.createUser(mockRequest, mockResponse);
         expect(mockResponse.state.status).toBe(400);
         expect(mockResponse.state.json).toMatchObject({message: 'Bad Request. Name is required!'})
@@ -48,26 +65,27 @@ describe('UserController', () => {
         const mockRequest = {
             body: {
                 name: 'Mateus',
-                email: ''
+                email: '',
+                password: '123123'
             } 
         } as Request;
-        const mockResponse = makeMockResponse();
+        
         userController.createUser(mockRequest, mockResponse);
         expect(mockResponse.state.status).toBe(400);
         expect(mockResponse.state.json).toMatchObject({message: 'Bad Request. Email is required!'})
     });
 
-    it('Should be delete user by name', () => {
+    it('Should have password in user body and have be grather or equal to 6', () => {
         const mockRequest = {
             body: {
-                name: 'Mateus'
+                name: 'Mateus',
+                email: 'mat@gmail.com',
+                password: '123'
             } 
         } as Request;
-        const mockResponse = makeMockResponse();
-        const deleteUserMock = jest.spyOn(userController.userService, 'deleteUser');
-
-        userController.deleteUser(mockRequest, mockResponse);
-
-        expect(deleteUserMock).toHaveBeenCalled();
+        
+        userController.createUser(mockRequest, mockResponse);
+        expect(mockResponse.state.status).toBe(400);
+        expect(mockResponse.state.json).toMatchObject({message: 'Bad Request. password is required and should have characters grater or equal to 6!'})
     });
 })
