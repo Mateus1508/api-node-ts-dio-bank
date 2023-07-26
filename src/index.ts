@@ -11,7 +11,7 @@ const server = express();
 server.use(express.json());
 server.use(router);
 
-server.get('/', (res: Response) => {
+server.get('/', (req, res: Response) => {
     return res.status(200).json({message: 'MateusBank'})
 });
 server.listen(5000, () => console.log('server on'));
